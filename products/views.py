@@ -10,16 +10,28 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import pandas as pd
 import numpy as np
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 
 class ProductList(APIView):
     def get(self, request):
         try:
-            products = Product.objects.all()
+            page = request.GET.get('page', 1)
+            per_page = request.GET.get('per_page', 25)
+
+            products = Product.objects.all().order_by('-product_id')
+            paginator = Paginator(products, per_page)
+
+            try:
+                paginated_products = paginator.page(page)
+            except PageNotAnInteger:
+                paginated_products = paginator.page(1)
+            except EmptyPage:
+                paginated_products = paginator.page(paginator.num_pages)
+
             product_list = []
-            for product in products:
-                
+            for product in paginated_products:
                 product_list.append({
                     'id': product.product_id,
                     'name': product.name,
@@ -32,9 +44,22 @@ class ProductList(APIView):
                     'customer_rating': product.customer_rating,
                     'demand_forecast': product.demand_forecast,
                     'optimized_price': product.optimized_price,
-
                 })
-            return JsonResponse({'data':product_list, 'status': 200,'message': 'Products fetched successfully'})
+
+            return JsonResponse({
+                'data': product_list,
+                'pagination': {
+                    'page': paginated_products.number,
+                    'per_page': int(per_page),
+                    'total_pages': paginator.num_pages,
+                    'total_items': paginator.count,
+                    'has_next': paginated_products.has_next(),
+                    'has_previous': paginated_products.has_previous()
+                },
+                'status': 200,
+                'message': 'Products fetched successfully'
+            })
+
         except Exception as e:
             print(f"Error fetching products: {e}")
             return JsonResponse({'message': 'Error fetching products', 'status': 500})
@@ -68,10 +93,8 @@ class ProductList(APIView):
                 optimized_price *= 1.1
             elif demand_forecast < 30:
                 optimized_price *= 0.9
-
-            print(f"Optimized Price: {optimized_price}")
+                
             # Create the product instance
-            print("demand price",demand_forecast)
             product = Product.objects.create(
                 name=name,
                 description=description,
@@ -99,6 +122,7 @@ class ParticularProduct(APIView):
         try:
 
             product = Product.objects.get(product_id=product_id)
+
             product_data = {
                     'id': product.product_id,
                     'name': product.name,
@@ -123,8 +147,12 @@ class ParticularProduct(APIView):
         try:
             product = Product.objects.get(product_id=product_id)
             data = request.data
-            
-            # Only update fields that are provided in the request
+            # print(data)
+            # for name,value in data.items():
+            #     print(f"{name}: {value}")
+            #     product.name = value 
+           
+
             if 'name' in data:
                 product.name = data.get('name')
             if 'description' in data:
@@ -145,6 +173,8 @@ class ParticularProduct(APIView):
                 product.demand_forecast = data.get('demand_forecast')
             if 'optimized_price' in data:
                 product.optimized_price = data.get('optimized_price')
+
+
  
             product.save()
             

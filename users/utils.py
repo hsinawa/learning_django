@@ -4,60 +4,9 @@ from django.conf import settings
 from django.urls import reverse
 from urllib.parse import urlencode
 import ssl
+from django.utils.html import strip_tags
 
 
-def get_email_html_template(name, company, job_links):
-    """
-    Generate HTML email content as a string with inline styling
-    
-    Parameters:
-    - name: Applicant's name
-    - company: Company name
-    - job_links: List of dictionaries with job titles and URLs
-    
-    Returns:
-    - HTML email content as a string
-    """
-    
-    # Create job links HTML
-    job_links_html = ""
-    for job in job_links:
-        job_links_html += f'all good\n'
-    
-    html = f'''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Application</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="margin-bottom: 20px;">
-        <p>Dear Hiring Manager at <span style="font-weight: bold; color: #0066cc;">{company}</span>,</p>
-    </div>
-    
-    <div>
-        <p>My name is {name}, and I am reaching out to express my interest in exploring software development opportunities at {company}.</p>
-        
-        <p>I recently came across your organization and was impressed by your innovative work in the tech industry. With my background in software development and passion for creating efficient, user-friendly solutions, I believe I could be a valuable addition to your team.</p>
-        
-        <p>I'm particularly interested in the following positions:</p>
-        
-        <div style="margin: 20px 0;">
-            {job_links_html}
-        </div>
-        
-        <p>I have attached my resume for your review, which details my experience, technical skills, and professional accomplishments. My expertise includes full-stack development, problem-solving, and working effectively in collaborative environments.</p>
-        
-        <p>I would welcome the opportunity to discuss how my skills and experience align with your team's needs. Thank you for considering my application.</p>
-    </div>
-    
-    <div style="margin-top: 30px;">
-        <p>Best regards,</p>
-        <p>{name}</p>
-    </div>
-</body>
-</html>'''
     
 
 def send_verification_email(user, request, token):
@@ -66,28 +15,50 @@ def send_verification_email(user, request, token):
         params = urlencode({'uid': user.id, 'token': token})
         verification_url = f"{base_url}/api/users/verify-email?{params}"
 
-        subject = "Verify your email for our project"
-        body = f"""
-        Hi {user.name},
-
-        Thank you for registering! Please verify your email address by clicking the link below:
-
-        {verification_url}
-
-        If you didn’t sign up for this account, you can ignore this email.
-
-        Regards,
-        Your Project Team
+        subject = "🔐 Verify Your Email Address - Project Name"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px;">
+            <div style="max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                <h2 style="color: #333;">Hi {user.name},</h2>
+                <p style="font-size: 16px; color: #555;">
+                    Thank you for registering with <strong>Our Project</strong>! <br/>
+                    Please confirm your email address by clicking the button below:
+                </p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}" 
+                       style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px; border-radius: 5px;">
+                        Verify Email
+                    </a>
+                </div>
+                <p style="font-size: 14px; color: #888;">
+                    If the button above doesn’t work, paste this link into your browser:<br/>
+                    <a href="{verification_url}" style="color: #4CAF50;">{verification_url}</a>
+                </p>
+                <hr style="margin: 30px 0;" />
+                <p style="font-size: 13px; color: #999;">
+                    If you did not create an account, you can safely ignore this email.
+                </p>
+                <p style="font-size: 14px; color: #777;">Warm regards,<br/><strong>Your Project Team</strong></p>
+            </div>
+        </body>
+        </html>
         """
-        print(f"Sending verification email to {verification_url}")
+
+        text_content = strip_tags(html_content)
+
         email = EmailMessage(
             subject,
-            body,
+            text_content,
             settings.EMAIL_HOST_USER,
             [user.email],
         )
+        email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=False)
+
+        print(f" Verification email sent to {user.email}")
         return verification_url
+
     except Exception as e:
-        print(f"Failed to send verification email: {e}")
+        print(f" Failed to send verification email: {e}")
         

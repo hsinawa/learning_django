@@ -15,3 +15,4 @@ class UserModel(models.Model):
         return self.name
     def get_email_field_name(self):
         return f"{self.email}"
+    

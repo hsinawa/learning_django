@@ -13,23 +13,20 @@ from datetime import timedelta
 import jwt
 
 
-# User Registration View
+# User Registration 
 class RegisterView(APIView):
     def post(self, request):
         name = request.data.get('name')
         email = request.data.get('email')
         password = request.data.get('password')
 
-        print(f"Received registration request: {request.data}")
-
         if not name or not email or not password:
             return JsonResponse({'message': 'All fields are required', 'status': 400})
-
 
         if UserModel.objects.filter(email=email).exists():
             return JsonResponse({'message': 'Email already exists', 'status': 400})
 
-    
+        #creating user
         user = UserModel.objects.create(
             name=name,
             email=email,
@@ -38,9 +35,7 @@ class RegisterView(APIView):
             is_admin=False,
         )
 
-        print(f"User created: {user}")
-        token = email_token_generator.make_token(user)
-        print(f"Generated token: {token}")
+        token = email_token_generator.make_token(user) #sending mail and generating token
         verification_url = send_verification_email(user, request, token)
 
         return JsonResponse({
@@ -70,6 +65,22 @@ class VerifyEmailView(APIView):
 
         except UserModel.DoesNotExist:
             return JsonResponse({'message': 'User not found', 'status': 404})
+
+
+class VerifyEmailLocal(APIView):
+    def get(self, request):
+        try:
+            email = request.GET.get('email')
+            user = UserModel.objects.get(email=email)
+            if user.is_active:
+                return JsonResponse({'message': 'Email already verified', 'status': 200})
+            else:
+                user.is_active = True
+                user.save()
+                return JsonResponse({'message': 'Email verified successfully', 'status': 200})
+        except Exception as e:
+            print(f"Error in local email verification: {e}")
+            return JsonResponse({'message': 'Error in local email verification', 'status': 500})
 
 
 # User Login View
