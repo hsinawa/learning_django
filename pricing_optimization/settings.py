@@ -82,6 +82,9 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000", # React dev server
+    "https://pricing-804594827915.asia-south1.run.app", # Cloud run deployment
+
 ]
 CORS_ALLOW_CREDENTIALS = True
 

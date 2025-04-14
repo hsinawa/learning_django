@@ -32,7 +32,7 @@ class RegisterView(APIView):
             email=email,
             password=make_password(password),
             is_active=False  ,
-            is_admin=False,
+            is_admin=True,
         )
 
         token = email_token_generator.make_token(user) #sending mail and generating token
